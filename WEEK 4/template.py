@@ -3,29 +3,40 @@ RECORD CHECK  -  my version
 ===========================
 
 Name  :terrell
-Lane  :  Cyber      (delete two)
-Date  :25/10/2026
+Lane  :  Cyber
+Date  :2026-11-8
+
+Loads source IP records (label,value,limit - the IP, failed logins and total
+attempts) from cyber_records.txt, checks and reports on each one, writes
+label,status lines to results.txt and prints how many came back OVER LIMIT.
+A missing data file prints a clear message instead of crashing.
 
 Run it:   python template.py
-
-Work through the numbered sections in order. Each one tells you what it must do.
-Delete these instructions as you replace them with your code.
 """
 
+# ================================================================== FUNCTIONS
+def load_records(path):
+    """Read label,value,limit lines from a file and return a list of dicts."""
+    records = []
+    with open(path) as f:
+        for line in f:
+            label, value, limit = line.strip().split(",")
+            records.append({
+                "label": label,
+                "value": float(value),
+                "limit": float(limit),
+            })
+    return records
 
-from pathlib import Path
 
-
-# =================================================================== FUNCTIONS
-
-def check_record(value, limit, warning_at=90):
-    """Work out the difference, percentage and status."""
-    difference = value - limit
+def check_record(value, limit):
+    """Return the difference, percentage and status for one record."""
+    difference = limit - value
     percent = (value / limit) * 100
 
     if percent >= 100:
         status = "OVER LIMIT"
-    elif percent >= warning_at:
+    elif percent >= 90:
         status = "WARNING"
     else:
         status = "OK"
@@ -33,47 +44,47 @@ def check_record(value, limit, warning_at=90):
     return difference, percent, status
 
 
+def print_report(label, value, limit, difference, percent, status):
+    """Print one bordered report - only shows values, calculates nothing."""
+    print()
+    print("=" * 34)
+    print(f"  RECORD CHECK  -  {label}")
+    print("=" * 34)
+    print(f"  Failed      : {value:>10.2f}")
+    print(f"  Attempts    : {limit:>10.2f}")
+    print(f"  Successful  : {difference:>10.2f}")
+    print(f"  Failed %    : {percent:>10.2f} %")
+    print(f"  Status      : {status:>10}")
+    print("=" * 34)
+
+
+def write_results(path, results):
+    """Write one label,status line per result to a new file."""
+    with open(path, "w") as f:
+        for result in results:
+            f.write(f"{result['label']},{result['status']}\n")
+
+
 # ====================================================================== STORE
-
-BASE_DIR = Path(__file__).parent
-file_path = BASE_DIR / "records_sample.txt"
-
-records = []
-
 try:
-    with open(file_path) as f:
-        for line in f:
-            label, value, limit = line.strip().split(",")
-
-            records.append({
-                "label": label,
-                "value": float(value),
-                "limit": float(limit)
-            })
-
+    records = load_records("cyber_records.txt")
 except FileNotFoundError:
-    print("records_sample.txt not found")
+    print("Could not find cyber_records.txt - starting with no records.")
+    records = []
 
 
-# =============================================================== PROCESS + OUTPUT
+# =========================================================== PROCESS + OUTPUT
+over_limit_count = 0
+results = []
 
 for record in records:
-    difference, percent, status = check_record(
-        record["value"],
-        record["limit"]
-    )
+    difference, percent, status = check_record(record["value"], record["limit"])
+    print_report(record["label"], record["value"], record["limit"],
+                 difference, percent, status)
+    results.append({"label": record["label"], "status": status})
 
-    print(f"{record['label']}:")
-    print(f"  Value: {record['value']:.2f}")
-    print(f"  Limit: {record['limit']:.2f}")
-    print(f"  Difference: {difference:+.2f}")
-    print(f"  Percentage: {percent:.1f}%")
-    print(f"  Status: {status}")
-    print()
-# ==========================================================================
-# 4. Before you finish:
-#
-#    [ ] Run it and check every record's numbers are correct by hand
-#    [ ] If you are loading from a file, check what happens when the file
-#        does not exist - write the error down
-#    [ ] Check every function still does one job
+    if status == "OVER LIMIT":
+        over_limit_count += 1
+
+write_results("results.txt", results)
+print(f"Checked {len(records)} records. {over_limit_count} were over limit.")

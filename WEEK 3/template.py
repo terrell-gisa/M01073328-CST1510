@@ -2,21 +2,21 @@
 RECORD CHECK  -  my version
 ===========================
 
-Name  :Gisa Terrell
-Lane  :  Cyber     (delete two)
-Date  :22/10/2026
+Name  :terrell
+Lane  :  Cyber
+Date  :2026-11-8
+
+Checks as many records as you like in one run. For each source IP it asks for
+the failed logins and total attempts, prints a bordered report with the status,
+and counts how many came back OVER LIMIT. Type "quit" as the source IP to stop.
 
 Run it:   python template.py
-
-Work through the numbered sections in order. Each one tells you what it must do.
-Delete these instructions as you replace them with your code.
 """
 
-# =================================================================== FUNCTIONS
-# 1. 
-# 
+
+# ================================================================== FUNCTIONS
 def status_of(percent):
-    """Return the status based on the given percentage."""
+    """Return "OVER LIMIT", "WARNING" or "OK" for a percentage."""
     if percent >= 100:
         return "OVER LIMIT"
     elif percent >= 90:
@@ -26,57 +26,45 @@ def status_of(percent):
 
 
 def check(value, limit):
-    """Calculate and return the difference and percentage."""
-    difference = value - limit
+    """Return the difference and the percentage of value against limit."""
+    difference = limit - value
     percent = (value / limit) * 100
     return difference, percent
 
 
 def print_report(label, value, limit, difference, percent, status):
-    """Print a report showing the value, limit, difference, percentage, and status."""
-    print(f"label: {label}")
-    print(f"value: {value}")
-    print(f"limit: {limit}")
-    print(f"difference: {difference}")
-    print(f"percentage: {percent:.2f}%")
-    print(f"status: {status}")
-
-# ==================================================================== INPUT
-# 2. Ask for your three values.
-
-label = input("Enter a name, hostname, or IP: ")
-value = float(input("Enter the value: "))
-limit = float(input("Enter the limit: "))
+    """Print one bordered report - only shows values, calculates nothing."""
+    print()
+    print("=" * 34)
+    print(f"  RECORD CHECK  -  {label}")
+    print("=" * 34)
+    print(f"  Failed      : {value:>10.2f}")
+    print(f"  Attempts    : {limit:>10.2f}")
+    print(f"  Successful  : {difference:>10.2f}")
+    print(f"  Failed %    : {percent:>10.2f} %")
+    print(f"  Status      : {status:>10}")
+    print("=" * 34)
 
 
-# ================================================================== PROCESS
-# 3.
-difference = value - limit
-percent = (value / limit) * 100
-status = status_of(percent)
+over_limit_count = 0
 
+while True:
+    # ================================================================== INPUT
+    source_ip = input("Source IP (or 'quit') : ")
+    if source_ip == "quit":
+        break
 
-# =================================================================== OUTPUT
-# 4. Print the report.
+    failed_logins  = float(input("Failed logins         : "))
+    total_attempts = float(input("Total attempts        : "))
 
+    # ================================================================ PROCESS
+    difference, percent = check(failed_logins, total_attempts)
+    status = status_of(percent)
 
-print()
-print("=" * 34)
-print(f"  RECORD CHECK  -  {label}")
-print("=" * 34)
+    if status == "OVER LIMIT":
+        over_limit_count += 1
 
-print(f"value: {value:.2f}")
-print(f"limit: {limit:.2f}")
-print(f"difference: {difference:.2f}")
-print(f"percent: {percent:.2f}%")
-print(f"status: {status}")
-print("=" * 34)
+    # ================================================================= OUTPUT
+    print_report(source_ip, failed_logins, total_attempts, difference, percent, status)
 
-
-# ==========================================================================
-# 5. Before you finish:
-#
-#    [ ] Run it three times with different numbers
-#    [ ] Run it with a total of 0 and note the error (do not fix it yet)
-#    [ ] Check every function does one job - if a function both calculates
-#        and prints, split it
+print(f"Sources over limit: {over_limit_count}")
